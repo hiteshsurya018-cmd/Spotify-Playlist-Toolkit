@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.venv/
+venv/
+spotify_transfer.db
+test_spotify_transfer.db
+
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment
+.env
+backend/.env
+frontend/.env
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
