@@ -1,4 +1,5 @@
-# ᯤ Spotify Playlist Bulk Transfer Manager ᖳᖰ
+# <img width="500" height="500" alt="870570-spotify" src="https://github.com/user-attachments/assets/36796f7b-bfe4-436b-ae0b-89d43f5611f9" />
+ Spotify Playlist Bulk Transfer Manager ᖳ
 
 A full-stack web app for selecting arbitrary groups of songs from a Spotify playlist and copying or moving them to another playlist in bulk.
 
