@@ -1,4 +1,4 @@
-# Spotify Playlist Bulk Transfer Manager
+# ᯤSpotify Playlist Bulk Transfer Manager
 
 A full-stack web app for selecting arbitrary groups of songs from a Spotify playlist and copying or moving them to another playlist in bulk.
 
