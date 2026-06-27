@@ -1,4 +1,4 @@
-from app.services.spotify_client import get_playlist_tracks_page
+from app.services.spotify_client import clear_playlist_cache, get_all_playlists, get_playlist_tracks_page, spotify_from_token
 
 
 class FakeCurrentSpotify:
@@ -29,6 +29,48 @@ class FakeCurrentSpotify:
             "total": 1,
             "next": None,
         }
+
+
+class FakePlaylistSpotify:
+    def __init__(self):
+        self.calls = 0
+
+    def current_user_playlists(self, limit=50, offset=0):
+        self.calls += 1
+        return {
+            "items": [
+                {
+                    "id": "playlist-1",
+                    "name": "Cached Playlist",
+                    "images": [],
+                    "owner": {"id": "user-1", "display_name": "Test User"},
+                    "tracks": {"total": 3},
+                    "public": False,
+                    "collaborative": False,
+                }
+            ],
+            "next": None,
+        }
+
+
+def test_spotify_from_token_disables_spotipy_status_retries():
+    sp = spotify_from_token({"access_token": "token"})
+
+    assert sp.retries == 0
+    assert sp.status_retries == 0
+
+
+def test_get_all_playlists_caches_per_user_and_returns_clones():
+    clear_playlist_cache()
+    sp = FakePlaylistSpotify()
+
+    first = get_all_playlists(sp, "user-1")
+    first[0].tracks_readable = False
+    second = get_all_playlists(sp, "user-1")
+
+    assert sp.calls == 1
+    assert second[0].tracks_readable is True
+    clear_playlist_cache()
 
 
 def test_get_playlist_tracks_page_uses_current_playlist_items_endpoint():

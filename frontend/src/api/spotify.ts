@@ -21,14 +21,73 @@ export type TrackQuery = {
   sortOrder?: 'asc' | 'desc';
 };
 
+let meRequestCount = 0;
+let playlistsRequestCount = 0;
+let meRequest: Promise<UserProfile> | null = null;
+let playlistsRequest: Promise<PlaylistSummary[]> | null = null;
+let playlistsCache: { data: PlaylistSummary[]; expiresAt: number } | null = null;
+let playlistsInvocationCount = 0;
+
+const PLAYLIST_CACHE_MS = 60_000;
+
 export async function getMe(): Promise<UserProfile> {
-  const { data } = await api.get<UserProfile>('/api/me');
-  return data;
+  if (meRequest) {
+    console.log('[api.spotify] getMe -> using in-flight request');
+    return meRequest;
+  }
+
+  meRequestCount += 1;
+  console.log(`[api.spotify] getMe #${meRequestCount} -> GET /api/me`);
+  meRequest = api
+    .get<UserProfile>('/api/me')
+    .then(({ data }) => data)
+    .finally(() => {
+      meRequest = null;
+    });
+  return meRequest;
 }
 
-export async function getPlaylists(): Promise<PlaylistSummary[]> {
-  const { data } = await api.get<PlaylistSummary[]>('/api/playlists');
-  return data;
+export function invalidatePlaylistsCache(): void {
+  playlistsCache = null;
+  playlistsRequest = null;
+}
+
+export async function getPlaylists(options: { force?: boolean; source?: string } = {}): Promise<PlaylistSummary[]> {
+  playlistsInvocationCount += 1;
+  const source = options.source ?? 'unknown';
+  console.log(`[api.spotify] getPlaylists invocation #${playlistsInvocationCount}`, {
+    source,
+    force: options.force ?? false,
+    hasCache: Boolean(playlistsCache),
+    cacheExpiresInMs: playlistsCache ? playlistsCache.expiresAt - Date.now() : null,
+    hasInFlightRequest: Boolean(playlistsRequest),
+  });
+
+  if (!options.force && playlistsCache && playlistsCache.expiresAt > Date.now()) {
+    console.log(`[api.spotify] getPlaylists -> using cached playlists source=${source}`);
+    return playlistsCache.data;
+  }
+
+  if (!options.force && playlistsRequest) {
+    console.log(`[api.spotify] getPlaylists -> using in-flight request source=${source}`);
+    return playlistsRequest;
+  }
+
+  playlistsRequestCount += 1;
+  console.log(`[api.spotify] getPlaylists network #${playlistsRequestCount} -> GET /api/playlists source=${source}`);
+  playlistsRequest = api
+    .get<PlaylistSummary[]>('/api/playlists')
+    .then(({ data }) => {
+      playlistsCache = {
+        data,
+        expiresAt: Date.now() + PLAYLIST_CACHE_MS,
+      };
+      return data;
+    })
+    .finally(() => {
+      playlistsRequest = null;
+    });
+  return playlistsRequest;
 }
 
 export async function getTracks(query: TrackQuery): Promise<TrackPage> {
@@ -50,6 +109,7 @@ export async function getTracks(query: TrackQuery): Promise<TrackPage> {
 
 export async function createPlaylist(payload: CreatePlaylistPayload): Promise<PlaylistSummary> {
   const { data } = await api.post<PlaylistSummary>('/api/playlists/create', payload);
+  invalidatePlaylistsCache();
   return data;
 }
 

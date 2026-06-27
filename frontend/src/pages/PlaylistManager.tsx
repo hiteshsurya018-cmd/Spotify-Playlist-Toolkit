@@ -10,6 +10,10 @@ import { useToast } from '../context/ToastContext';
 import type { PlaylistSummary, Track, TransferResult } from '../types';
 import { exportUrl, thirtyDaysAgo } from '../utils/format';
 
+let playlistManagerLoadFirstPageCount = 0;
+let playlistManagerEffectCount = 0;
+let playlistManagerTransferEventCount = 0;
+
 export function PlaylistManager() {
   const { playlistId = '' } = useParams();
   const { notify } = useToast();
@@ -37,9 +41,21 @@ export function PlaylistManager() {
   const selectedList = useMemo(() => [...selectedUris], [selectedUris]);
 
   const loadFirstPage = useCallback(async () => {
+    playlistManagerLoadFirstPageCount += 1;
+    console.log(`[PlaylistManager] loadFirstPage #${playlistManagerLoadFirstPageCount} invoked`, {
+      playlistId,
+      search,
+      artist,
+      album,
+      minDuration,
+      maxDuration,
+      sortBy,
+      sortOrder,
+      blockedPlaylistCount: blockedPlaylistIds.size,
+    });
     setLoading(true);
     try {
-      const playlistData = await getPlaylists();
+      const playlistData = await getPlaylists({ source: 'PlaylistManager.loadFirstPage' });
       setPlaylists(playlistData);
 
       const playlist = playlistData.find((item) => item.id === playlistId);
@@ -82,7 +98,22 @@ export function PlaylistManager() {
   }, [playlistId, search, artist, album, minDuration, maxDuration, sortBy, sortOrder, notify, blockedPlaylistIds]);
 
   useEffect(() => {
+    playlistManagerEffectCount += 1;
+    console.log(`[PlaylistManager] useEffect #${playlistManagerEffectCount} -> loadFirstPage`);
     void loadFirstPage();
+  }, [loadFirstPage]);
+
+  useEffect(() => {
+    function handleTransferCompleted() {
+      playlistManagerTransferEventCount += 1;
+      console.log(
+        `[PlaylistManager] playlist-transfer-completed #${playlistManagerTransferEventCount} -> loadFirstPage`,
+      );
+      void loadFirstPage();
+    }
+
+    window.addEventListener('playlist-transfer-completed', handleTransferCompleted);
+    return () => window.removeEventListener('playlist-transfer-completed', handleTransferCompleted);
   }, [loadFirstPage]);
 
   async function loadMore() {
@@ -313,7 +344,16 @@ export function PlaylistManager() {
       ) : null}
 
       {tracksUnavailable ? null : (
-        <TrackTable tracks={tracks} selectedUris={selectedUris} sortBy={sortBy} sortOrder={sortOrder} onToggle={toggle} onToggleAllVisible={toggleAllVisible} onSort={updateSort} />
+        <TrackTable
+          tracks={tracks}
+          sourcePlaylistId={playlistId}
+          selectedUris={selectedUris}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onToggle={toggle}
+          onToggleAllVisible={toggleAllVisible}
+          onSort={updateSort}
+        />
       )}
 
       <div className="flex justify-center">

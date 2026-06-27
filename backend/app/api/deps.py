@@ -38,8 +38,16 @@ def get_spotify(
 ):
     manager = oauth_manager(settings)
     token_info = session.token_info
-    if manager.is_token_expired(token_info):
+    token_expired = manager.is_token_expired(token_info)
+    print(
+        "[api.deps] get_spotify "
+        f"session_id={session.id} spotify_user_id={session.spotify_user_id} "
+        f"token_expired={token_expired}"
+    )
+    if token_expired:
+        print(f"[api.deps] refresh_access_token start session_id={session.id}")
         token_info = manager.refresh_access_token(token_info["refresh_token"])
+        print(f"[api.deps] refresh_access_token done session_id={session.id}")
         session.token_info = token_info
         db.add(session)
         db.commit()

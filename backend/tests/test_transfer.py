@@ -19,12 +19,14 @@ class FakeSpotify:
         items = [{"item": {"uri": uri}} for uri in self.destination_items[offset : offset + limit]]
         return {"items": items, "next": None, "total": len(self.destination_items)}
 
-    def playlist_add_items(self, playlist_id, items):
-        self.added.append((playlist_id, items))
+    def _post(self, path, payload=None, **kwargs):
+        playlist_id = path.split("/")[1]
+        self.added.append((playlist_id, payload["uris"]))
         return {"snapshot_id": "added"}
 
-    def playlist_remove_all_occurrences_of_items(self, playlist_id, items):
-        self.removed.append((playlist_id, items))
+    def _delete(self, path, payload=None, **kwargs):
+        playlist_id = path.split("/")[1]
+        self.removed.append((playlist_id, [item["uri"] for item in payload["items"]]))
         return {"snapshot_id": "removed"}
 
 

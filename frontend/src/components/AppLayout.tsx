@@ -1,8 +1,9 @@
 import { LogOut, Music2 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
+import { PlaylistSidebar } from './PlaylistSidebar';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -39,23 +40,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <div className="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:grid-cols-[16rem_1fr]">
-        <aside className="hidden border-r border-line bg-[#0E141B] p-4 lg:block">
-          <nav className="space-y-1">
-            <NavLink
-              className={({ isActive }) =>
-                `block rounded-md px-3 py-2 text-sm ${isActive ? 'bg-spotify text-black' : 'text-slate-300 hover:bg-white/5'}`
-              }
-              to="/dashboard"
-            >
-              Playlists
-            </NavLink>
-          </nav>
-          <div className="mt-6 rounded-md border border-line p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Library</p>
-            <p className="mt-2 text-2xl font-semibold">{user?.total_playlists ?? 0}</p>
-            <p className="text-sm text-slate-400">Spotify playlists</p>
-          </div>
-        </aside>
+        <PlaylistSidebar />
         <main className="min-w-0 p-4 sm:p-6">{children}</main>
       </div>
     </div>

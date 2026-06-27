@@ -15,6 +15,9 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+let authRefreshCount = 0;
+let authEffectCount = 0;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginUrl = `${API_BASE_URL}/api/auth/login`;
 
   const refreshMe = useCallback(async () => {
+    authRefreshCount += 1;
+    console.log(`[AuthContext] refreshMe #${authRefreshCount} invoked`);
     setLoading(true);
     setError(null);
     try {
@@ -44,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    authEffectCount += 1;
+    console.log(`[AuthContext] useEffect #${authEffectCount} -> refreshMe`);
     void refreshMe();
   }, [refreshMe]);
 

@@ -24,6 +24,7 @@ describe('TrackTable', () => {
     render(
       <TrackTable
         tracks={tracks}
+        sourcePlaylistId="playlist-1"
         selectedUris={new Set()}
         sortBy="name"
         sortOrder="asc"

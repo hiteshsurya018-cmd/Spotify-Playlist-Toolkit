@@ -5,6 +5,7 @@ from app.api.deps import get_current_session, get_spotify, require_csrf
 from app.db import get_db
 from app.models.db import UserSession
 from app.models.schemas import DuplicateSummary, TransferRequest, TransferResult, UndoResult
+from app.services.spotify_client import clear_playlist_cache
 from app.services.transfer import detect_duplicates, transfer_tracks, undo_transfer
 
 router = APIRouter(prefix="/api/tracks", tags=["tracks"])
@@ -25,6 +26,7 @@ def copy_tracks(
     result = transfer_tracks(sp, session, "copy", payload)
     db.add(session)
     db.commit()
+    clear_playlist_cache(session.spotify_user_id)
     return result
 
 
@@ -38,6 +40,7 @@ def move_tracks(
     result = transfer_tracks(sp, session, "move", payload)
     db.add(session)
     db.commit()
+    clear_playlist_cache(session.spotify_user_id)
     return result
 
 
@@ -50,4 +53,5 @@ def undo(
     restored, message = undo_transfer(sp, session)
     db.add(session)
     db.commit()
+    clear_playlist_cache(session.spotify_user_id)
     return UndoResult(restored=restored, action="undo", message=message)

@@ -19,7 +19,6 @@ from app.core.security import (
 from app.db import get_db
 from app.models.db import UserSession
 from app.services.spotify_client import (
-    get_all_playlists,
     oauth_manager,
     spotify_from_token,
 )
@@ -84,7 +83,6 @@ def callback(
     sp = spotify_from_token(token_info)
 
     profile = sp.current_user()
-    playlists = get_all_playlists(sp, profile["id"])
 
     session = UserSession(
         id=str(uuid.uuid4()),
@@ -111,8 +109,6 @@ def callback(
         settings.session_secret,
         settings.cookie_secure,
     )
-
-    response.headers["X-Playlist-Count"] = str(len(playlists))
 
     return response
 

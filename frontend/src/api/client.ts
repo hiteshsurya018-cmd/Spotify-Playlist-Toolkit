@@ -13,6 +13,7 @@ const fallbackApiBaseUrl = defaultApiBaseUrl(typeof window === 'undefined' ? und
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? fallbackApiBaseUrl;
 
 let csrfToken: string | null = null;
+let playlistHttpRequestCount = 0;
 
 export function setCsrfToken(token: string | null): void {
   csrfToken = token;
@@ -25,6 +26,14 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  if ((config.method ?? 'get').toLowerCase() === 'get' && config.url === '/api/playlists') {
+    playlistHttpRequestCount += 1;
+    console.log(`[api.client] HTTP GET /api/playlists #${playlistHttpRequestCount}`, {
+      baseURL: config.baseURL,
+      url: config.url,
+    });
+  }
+
   if (csrfToken && ['post', 'put', 'patch', 'delete'].includes((config.method ?? '').toLowerCase())) {
     config.headers = AxiosHeaders.from(config.headers);
     config.headers.set('X-CSRF-Token', csrfToken);

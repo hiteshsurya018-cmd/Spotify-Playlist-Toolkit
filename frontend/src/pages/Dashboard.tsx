@@ -8,16 +8,22 @@ import { PlaylistCard } from '../components/PlaylistCard';
 import { useToast } from '../context/ToastContext';
 import type { PlaylistSummary } from '../types';
 
+let dashboardLoadCount = 0;
+let dashboardEffectCount = 0;
+
 export function Dashboard() {
   const navigate = useNavigate();
   const { notify } = useToast();
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function loadPlaylists() {
+  async function loadPlaylists(options: { force?: boolean; source?: string } = {}) {
+    dashboardLoadCount += 1;
+    const source = options.source ?? 'Dashboard.loadPlaylists';
+    console.log(`[Dashboard] loadPlaylists #${dashboardLoadCount} invoked source=${source}`);
     setLoading(true);
     try {
-      setPlaylists(await getPlaylists());
+      setPlaylists(await getPlaylists({ force: options.force, source }));
     } catch (err) {
       notify('error', errorMessage(err));
     } finally {
@@ -26,7 +32,9 @@ export function Dashboard() {
   }
 
   useEffect(() => {
-    void loadPlaylists();
+    dashboardEffectCount += 1;
+    console.log(`[Dashboard] useEffect #${dashboardEffectCount} -> loadPlaylists`);
+    void loadPlaylists({ source: 'Dashboard.useEffect' });
   }, []);
 
   return (
@@ -39,7 +47,7 @@ export function Dashboard() {
         <button
           className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm text-slate-200 hover:bg-white/5"
           type="button"
-          onClick={() => void loadPlaylists()}
+          onClick={() => void loadPlaylists({ force: true, source: 'Dashboard.refreshButton' })}
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh

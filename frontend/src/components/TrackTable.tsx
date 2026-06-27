@@ -1,10 +1,12 @@
 import { ArrowDownUp, CheckSquare, Square } from 'lucide-react';
+import type { DragEvent } from 'react';
 
 import type { Track } from '../types';
 import { formatDuration } from '../utils/format';
 
 type Props = {
   tracks: Track[];
+  sourcePlaylistId: string;
   selectedUris: Set<string>;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
@@ -13,8 +15,20 @@ type Props = {
   onSort: (column: string) => void;
 };
 
-export function TrackTable({ tracks, selectedUris, sortBy, sortOrder, onToggle, onToggleAllVisible, onSort }: Props) {
+export function TrackTable({ tracks, sourcePlaylistId, selectedUris, sortBy, sortOrder, onToggle, onToggleAllVisible, onSort }: Props) {
   const allVisibleSelected = tracks.length > 0 && tracks.every((track) => selectedUris.has(track.uri));
+
+  function handleDragStart(event: DragEvent<HTMLTableRowElement>, track: Track) {
+    const trackUris = selectedUris.has(track.uri) ? [...selectedUris] : [track.uri];
+    const payload = JSON.stringify({
+      sourcePlaylistId,
+      trackUris,
+    });
+
+    event.dataTransfer.effectAllowed = 'copyMove';
+    event.dataTransfer.setData('application/json', payload);
+    event.dataTransfer.setData('text/plain', payload);
+  }
 
   return (
     <div className="overflow-hidden rounded-md border border-line">
@@ -55,7 +69,12 @@ export function TrackTable({ tracks, selectedUris, sortBy, sortOrder, onToggle, 
           </thead>
           <tbody className="divide-y divide-line bg-panel">
             {tracks.map((track) => (
-              <tr key={track.uri} className="hover:bg-white/[0.03]">
+              <tr
+                key={track.uri}
+                className="cursor-grab hover:bg-white/[0.03] active:cursor-grabbing"
+                draggable
+                onDragStart={(event) => handleDragStart(event, track)}
+              >
                 <td className="px-4 py-3">
                   <input
                     checked={selectedUris.has(track.uri)}
