@@ -164,18 +164,27 @@ def normalize_playlist(item: dict, current_user_id: str | None = None) -> Playli
     owner = item.get("owner", {})
     owner_id = owner.get("id")
     collaborative = item.get("collaborative", False)
+    print("PLAYLIST:", item["name"])
+    print("TRACKS:", item.get("tracks"))
+    print("TOTAL:", item.get("tracks", {}).get("total"))
+    
+    track_count = (
+    item.get("tracks", {}).get("total")
+    or item.get("items", {}).get("total")
+    or 0
+    )
+
     return PlaylistSummary(
         id=item["id"],
         name=item["name"],
         images=normalize_images(item.get("images")),
         owner=owner.get("display_name") or owner.get("id", "Unknown"),
         owner_id=owner_id,
-        tracks_total=item.get("tracks", {}).get("total", 0),
+        tracks_total=track_count,
         public=item.get("public"),
         collaborative=collaborative,
         tracks_readable=bool(current_user_id and owner_id == current_user_id) or collaborative,
     )
-
 
 def normalize_track(item: dict) -> Track | None:
     track = item.get("track") or item.get("item") or item
@@ -281,6 +290,12 @@ def get_all_playlists(sp: spotipy.Spotify, current_user_id: str | None = None) -
                 raise
 
         page = retry_spotify(fetch_current_user_playlists)
+        print("\n========== FIRST PLAYLIST RAW ==========")
+
+        if page.get("items"):
+            print(page["items"][0])
+
+        print("========================================\n")
         playlists.extend(normalize_playlist(item, current_user_id) for item in page.get("items", []))
         if not page.get("next"):
             break
