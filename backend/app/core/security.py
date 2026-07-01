@@ -1,3 +1,4 @@
+import logging
 import secrets
 from datetime import datetime, timezone
 from typing import Literal
@@ -8,6 +9,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeSerializer, URLS
 SESSION_COOKIE = "spbtm_session"
 OAUTH_STATE_COOKIE = "spbtm_oauth_state"
 CookieSameSite = Literal["lax", "strict", "none"]
+logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
@@ -55,6 +57,10 @@ def normalize_cookie_policy(secure: bool, samesite: CookieSameSite) -> tuple[boo
     return secure, samesite
 
 
+def cookie_names(request: Request) -> list[str]:
+    return sorted(request.cookies.keys())
+
+
 def set_session_cookie(
     response: Response,
     value: str,
@@ -63,6 +69,12 @@ def set_session_cookie(
     samesite: CookieSameSite = "lax",
 ) -> None:
     secure, samesite = normalize_cookie_policy(secure, samesite)
+    logger.info(
+        "set_session_cookie secure=%s samesite=%s value_length=%s",
+        secure,
+        samesite,
+        len(value),
+    )
     response.set_cookie(
         SESSION_COOKIE,
         sign_value(secret, value),
@@ -75,11 +87,19 @@ def set_session_cookie(
 
 def read_session_cookie(request: Request, secret: str) -> str | None:
     raw = request.cookies.get(SESSION_COOKIE)
-    return unsign_value(secret, raw) if raw else None
+    session_id = unsign_value(secret, raw) if raw else None
+    logger.info(
+        "read_session_cookie has_cookie=%s valid=%s request_cookie_names=%s",
+        raw is not None,
+        session_id is not None,
+        cookie_names(request),
+    )
+    return session_id
 
 
 def clear_session_cookie(response: Response, secure: bool = False, samesite: CookieSameSite = "lax") -> None:
     secure, samesite = normalize_cookie_policy(secure, samesite)
+    logger.info("clear_session_cookie secure=%s samesite=%s", secure, samesite)
     response.delete_cookie(SESSION_COOKIE, secure=secure, httponly=True, samesite=samesite)
 
 
@@ -91,6 +111,12 @@ def set_oauth_state_cookie(
     samesite: CookieSameSite = "lax",
 ) -> None:
     secure, samesite = normalize_cookie_policy(secure, samesite)
+    logger.info(
+        "set_oauth_state_cookie secure=%s samesite=%s value_length=%s",
+        secure,
+        samesite,
+        len(value),
+    )
     response.set_cookie(
         OAUTH_STATE_COOKIE,
         sign_value(secret, value),
@@ -103,9 +129,17 @@ def set_oauth_state_cookie(
 
 def read_oauth_state_cookie(request: Request, secret: str) -> str | None:
     raw = request.cookies.get(OAUTH_STATE_COOKIE)
-    return unsign_value(secret, raw) if raw else None
+    state = unsign_value(secret, raw) if raw else None
+    logger.info(
+        "read_oauth_state_cookie has_cookie=%s valid=%s request_cookie_names=%s",
+        raw is not None,
+        state is not None,
+        cookie_names(request),
+    )
+    return state
 
 
 def clear_oauth_state_cookie(response: Response, secure: bool = False, samesite: CookieSameSite = "lax") -> None:
     secure, samesite = normalize_cookie_policy(secure, samesite)
+    logger.info("clear_oauth_state_cookie secure=%s samesite=%s", secure, samesite)
     response.delete_cookie(OAUTH_STATE_COOKIE, secure=secure, httponly=True, samesite=samesite)

@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from spotipy.exceptions import SpotifyException
+
+logger = logging.getLogger(__name__)
 
 
 class ApiError(Exception):
@@ -43,4 +47,23 @@ def install_error_handlers(app: FastAPI) -> None:
                 },
             },
             headers=headers,
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception(
+            "unhandled request error method=%s path=%s query=%s",
+            request.method,
+            request.url.path,
+            request.url.query,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "code": "internal_server_error",
+                    "message": "Internal Server Error",
+                    "details": {"exception_type": type(exc).__name__},
+                },
+            },
         )
