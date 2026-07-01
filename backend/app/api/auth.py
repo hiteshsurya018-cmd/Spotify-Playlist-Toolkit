@@ -1,4 +1,5 @@
 import uuid
+import logging
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import RedirectResponse
@@ -24,6 +25,7 @@ from app.services.spotify_client import (
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/login")
@@ -39,7 +41,8 @@ def login(settings: Settings = Depends(get_settings)) -> Response:
         response,
         state,
         settings.session_secret,
-        settings.cookie_secure,
+        settings.session_cookie_secure,
+        settings.session_cookie_samesite,
     )
 
     return response
@@ -96,24 +99,39 @@ def callback(
     db.commit()
 
     frontend_url = str(settings.frontend_url).rstrip("/")
+    redirect_url = f"{frontend_url}/dashboard"
 
-    response = RedirectResponse(
-        f"{frontend_url}/dashboard"
+    response = RedirectResponse(redirect_url)
+
+    clear_oauth_state_cookie(
+        response,
+        settings.session_cookie_secure,
+        settings.session_cookie_samesite,
     )
-
-    clear_oauth_state_cookie(response)
 
     set_session_cookie(
         response,
         session.id,
         settings.session_secret,
-        settings.cookie_secure,
+        settings.session_cookie_secure,
+        settings.session_cookie_samesite,
+    )
+
+    logger.info(
+        "spotify callback created session redirect_url=%s cookie_secure=%s cookie_samesite=%s",
+        redirect_url,
+        settings.session_cookie_secure,
+        settings.session_cookie_samesite,
     )
 
     return response
 
 
 @router.post("/logout")
-def logout(response: Response) -> dict:
-    clear_session_cookie(response)
+def logout(response: Response, settings: Settings = Depends(get_settings)) -> dict:
+    clear_session_cookie(
+        response,
+        settings.session_cookie_secure,
+        settings.session_cookie_samesite,
+    )
     return {"ok": True}

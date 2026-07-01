@@ -1,11 +1,13 @@
 import secrets
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import Request, Response
 from itsdangerous import BadSignature, SignatureExpired, URLSafeSerializer, URLSafeTimedSerializer
 
 SESSION_COOKIE = "spbtm_session"
 OAUTH_STATE_COOKIE = "spbtm_oauth_state"
+CookieSameSite = Literal["lax", "strict", "none"]
 
 
 def utc_now() -> datetime:
@@ -47,13 +49,26 @@ def verify_oauth_state(secret: str, value: str, max_age: int = 600) -> bool:
     return isinstance(data, dict) and isinstance(data.get("nonce"), str)
 
 
-def set_session_cookie(response: Response, value: str, secret: str, secure: bool) -> None:
+def normalize_cookie_policy(secure: bool, samesite: CookieSameSite) -> tuple[bool, CookieSameSite]:
+    if samesite == "none":
+        return True, samesite
+    return secure, samesite
+
+
+def set_session_cookie(
+    response: Response,
+    value: str,
+    secret: str,
+    secure: bool,
+    samesite: CookieSameSite = "lax",
+) -> None:
+    secure, samesite = normalize_cookie_policy(secure, samesite)
     response.set_cookie(
         SESSION_COOKIE,
         sign_value(secret, value),
         httponly=True,
         secure=secure,
-        samesite="none",
+        samesite=samesite,
         max_age=60 * 60 * 24 * 14,
     )
 
@@ -63,17 +78,25 @@ def read_session_cookie(request: Request, secret: str) -> str | None:
     return unsign_value(secret, raw) if raw else None
 
 
-def clear_session_cookie(response: Response) -> None:
-    response.delete_cookie(SESSION_COOKIE)
+def clear_session_cookie(response: Response, secure: bool = False, samesite: CookieSameSite = "lax") -> None:
+    secure, samesite = normalize_cookie_policy(secure, samesite)
+    response.delete_cookie(SESSION_COOKIE, secure=secure, httponly=True, samesite=samesite)
 
 
-def set_oauth_state_cookie(response: Response, value: str, secret: str, secure: bool) -> None:
+def set_oauth_state_cookie(
+    response: Response,
+    value: str,
+    secret: str,
+    secure: bool,
+    samesite: CookieSameSite = "lax",
+) -> None:
+    secure, samesite = normalize_cookie_policy(secure, samesite)
     response.set_cookie(
         OAUTH_STATE_COOKIE,
         sign_value(secret, value),
         httponly=True,
         secure=secure,
-        samesite="none",
+        samesite=samesite,
         max_age=600,
     )
 
@@ -83,5 +106,6 @@ def read_oauth_state_cookie(request: Request, secret: str) -> str | None:
     return unsign_value(secret, raw) if raw else None
 
 
-def clear_oauth_state_cookie(response: Response) -> None:
-    response.delete_cookie(OAUTH_STATE_COOKIE)
+def clear_oauth_state_cookie(response: Response, secure: bool = False, samesite: CookieSameSite = "lax") -> None:
+    secure, samesite = normalize_cookie_policy(secure, samesite)
+    response.delete_cookie(OAUTH_STATE_COOKIE, secure=secure, httponly=True, samesite=samesite)

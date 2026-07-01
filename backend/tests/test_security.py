@@ -1,6 +1,12 @@
 from fastapi import Request, Response
 
-from app.core.security import SESSION_COOKIE, create_oauth_state, read_session_cookie, set_session_cookie, verify_oauth_state
+from app.core.security import (
+    SESSION_COOKIE,
+    create_oauth_state,
+    read_session_cookie,
+    set_session_cookie,
+    verify_oauth_state,
+)
 
 
 def test_session_cookie_is_signed_and_http_only():
@@ -21,6 +27,15 @@ def test_signed_cookie_round_trip():
     request = Request({"type": "http", "headers": [(b"cookie", f"{SESSION_COOKIE}={signed}".encode())]})
 
     assert read_session_cookie(request, "test-secret-value-long-enough") == "session-id"
+
+
+def test_samesite_none_cookie_is_forced_secure():
+    response = Response()
+    set_session_cookie(response, "session-id", "test-secret-value-long-enough", secure=False, samesite="none")
+
+    cookie = response.headers["set-cookie"]
+    assert "SameSite=none" in cookie
+    assert "Secure" in cookie
 
 
 def test_oauth_state_is_signed_and_verifiable_without_cookie():
