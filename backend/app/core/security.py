@@ -53,7 +53,7 @@ def set_session_cookie(response: Response, value: str, secret: str, secure: bool
         sign_value(secret, value),
         httponly=True,
         secure=secure,
-        samesite="lax",
+        samesite="none",
         max_age=60 * 60 * 24 * 14,
     )
 
@@ -73,7 +73,7 @@ def set_oauth_state_cookie(response: Response, value: str, secret: str, secure: 
         sign_value(secret, value),
         httponly=True,
         secure=secure,
-        samesite="lax",
+        samesite="none",
         max_age=600,
     )
 
